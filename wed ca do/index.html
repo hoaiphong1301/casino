@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>🎮 Cổng Trò Chơi</title>
+  <style>
+    :root {
+      --bg: #0f1724;
+      --card: #111827;
+      --accent: #06b6d4;
+      --accent-2: #7c3aed;
+      --muted: #94a3b8;
+    }
+    * {
+      box-sizing: border-box;
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(circle at top, #1e293b, #0f1724);
+      color: #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 40px 16px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 28px;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      background-clip: text;
+      -webkit-background-clip: text; /* Cho Chrome/Safari */
+      color: transparent;
+      -webkit-text-fill-color: transparent; /* Cho Safari */
+
+    }
+
+    .balance-box {
+      background: rgba(255,255,255,0.05);
+      padding: 16px 32px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 40px;
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .games-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 24px;
+      width: 100%;
+      max-width: 900px;
+    }
+
+    .game-card {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+      cursor: pointer;
+      text-align: center;
+    }
+    .game-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 8px 26px rgba(0,0,0,0.6);
+    }
+
+    .game-card img {
+      width: 80px;
+      height: 80px;
+      object-fit: contain;
+      margin-bottom: 12px;
+    }
+
+    .game-card h3 {
+      margin: 6px 0;
+      color: #f1f5f9;
+    }
+
+    .game-card p {
+      color: var(--muted);
+      font-size: 13px;
+      margin: 0;
+    }
+
+    footer {
+      margin-top: 60px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>🎮 Trung tâm trò chơi</h1>
+    <div class="balance-box">
+      💰 Số dư hiện tại: <span id="balance">0</span> ₫
+    </div>
+  </header>
+
+  <main>
+    <div class="games-grid">
+      <div class="game-card" onclick="goTo('taixiu.html')">
+        <img src="hinh/taixiu.jpg" alt="Tài Xỉu">
+        <h3>Tài Xỉu</h3>
+        <p>Cược vui - Thử vận may!</p>
+      </div>
+
+      <div class="game-card" onclick="goTo('xidach.html')">
+        <img src="hinh/xidach.png" alt="Xì Dách">
+        <h3>Xì Dách</h3>
+        <p>Đọ bài với nhà cái!</p>
+      </div>
+
+      <!-- chỗ này sau có thể thêm game khác -->
+      <!--
+      <div class="game-card" onclick="goTo('blackjack.html')">
+        <img src="blackjack.png">
+        <h3>Blackjack</h3>
+        <p>Đang phát triển...</p>
+      </div>
+      -->
+    </div>
+  </main>
+
+  <footer>
+    © 2025 GameHub — All rights reserved.
+  </footer>
+
+  <script>
+    // Lấy số dư từ localStorage (dùng cùng key với Tài Xỉu)
+    const balance = Number(localStorage.getItem('tx_balance')) || 200000;
+    document.getElementById('balance').textContent = balance.toLocaleString('vi-VN');
+
+    function goTo(page) {
+      window.location.href = page;
+    }
+  </script>
+</body>
+</html>
