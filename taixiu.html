@@ -66,26 +66,8 @@
 }
 
   </style>
-
 </head>
-<button onclick="resetStorage()" 
-        style="position:fixed;bottom:20px;right:20px;
-               padding:10px 16px;border:none;
-               background:#ef4444;color:white;
-               border-radius:8px;cursor:pointer">
-  🔄 Reset Dữ Liệu
-</button>
 
-<script>
-function resetStorage() {
-  if (confirm('Bạn có chắc muốn reset dữ liệu?')) {
-    localStorage.removeItem('tx_balance');
-    localStorage.removeItem('tx_jackpot');
-    localStorage.removeItem('tx_choice');
-    alert('Đã xóa dữ liệu lưu trữ. Tải lại trang để áp dụng!');
-    location.reload();
-  }
-}
 </script>
 <body>
   <button id="backHome" class="back-btn">🏠 Quay lại Trang Chính</button>
