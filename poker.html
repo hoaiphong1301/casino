@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Texas Hold'em Poker AI</title>
+  <style>
+    :root{--bg:#071826;--card:#0f1724;--panel:#0b1220;--accent:#06b6d4;--accent2:#7c3aed;--muted:#94a3b8}
+    *{box-sizing:border-box;font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial}
+    body{margin:0;background:linear-gradient(180deg,var(--bg),#022028);color:#e6eef6;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:28px}
+    .wrap{width:980px;max-width:100%;display:grid;grid-template-columns:1fr 360px;gap:20px}
+    .panel{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;padding:16px;}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+    h1{margin:0;font-size:20px}
+    .table{background:linear-gradient(180deg,#071827,#08121a);padding:18px;border-radius:12px;text-align:center}
+    .section-title{color:var(--muted);font-size:13px;margin-bottom:8px}
+    .cards{display:flex;gap:10px;justify-content:center;margin-bottom:10px}
+    .card{width:64px;height:92px;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;color:#000;box-shadow:0 8px 20px rgba(2,6,23,0.6)}
+    .card.red{color:#b91c1c}
+    .card.back{background:linear-gradient(135deg,#334155,#1f2937);color:transparent;position:relative}
+    .card.back::after{content:'🂠';font-size:28px;position:absolute}
+    .controls{display:flex;gap:8px;align-items:center;justify-content:center;margin-top:8px;flex-wrap:wrap}
+    select,input{padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
+    button{padding:10px 14px;border-radius:10px;border:none;background:linear-gradient(90deg,var(--accent),var(--accent2));color:#021017;font-weight:700;cursor:pointer}
+    button:disabled{opacity:0.45;cursor:not-allowed}
+    .right{display:flex;flex-direction:column;gap:12px}
+    .info{padding:12px;border-radius:10px;background:rgba(255,255,255,0.02)}
+    .stat{display:flex;justify-content:space-between;align-items:center}
+    .history{max-height:320px;overflow:auto;padding:8px;border-radius:8px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.008));}
+    .h-item{display:flex;justify-content:space-between;padding:8px;border-bottom:1px solid rgba(255,255,255,0.02);font-size:13px}
+    .result{margin-top:10px;font-weight:800}
+    footer{font-size:12px;color:var(--muted);text-align:center;margin-top:8px}
+    @media(max-width:920px){.wrap{grid-template-columns:1fr;}}
+    
+    #backHome{position:fixed;top:10px;left:10px;z-index:999;padding:8px 12px;border-radius:8px;background:linear-gradient(90deg,var(--accent),var(--accent2));color:#021017;font-weight:700;cursor:pointer;border:none;}
+  </style>
+</head>
+<body>
+    <button id="backHome" class="back-btn">🏠 Quay lại Trang Chính</button>
+  <div class="wrap">
+    <div class="panel">
+      <header>
+        <h1>Texas Hold'em AI</h1>
+        <div>Balance: <strong id="balance">0</strong> ₫</div>
+      </header>
+
+      <div class="table">
+        <div class="section-title">Bàn chung</div>
+        <div id="community" class="cards"></div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin:12px 0">
+          <div style="width:48%">
+            <div class="section-title">Bài bạn</div>
+            <div id="player" class="cards"></div>
+            <div id="playerHand" style="margin-top:6px;color:var(--muted)"></div>
+          </div>
+          <div style="width:48%">
+            <div class="section-title">Bài nhà cái</div>
+            <div id="dealer" class="cards"></div>
+            <div id="dealerHand" style="margin-top:6px;color:var(--muted)"></div>
+          </div>
+        </div>
+
+        <div class="controls">
+          <select id="betSelect">
+            <option value="50000">50000</option>
+            <option value="100000" selected>100000</option>
+            <option value="200000">200000</option>
+            <option value="500000">500000</option>
+          </select>
+          <button id="startBtn">Bắt đầu ván</button>
+          <button id="callBtn" disabled>Call</button>
+          <button id="raiseBtn" disabled>Raise</button>
+          <button id="foldBtn" disabled>Fold</button>
+          <button id="nextBtn" disabled>Lật bài</button>
+        </div>
+
+        <div class="result" id="result"></div>
+      </div>
+    </div>
+
+    <aside class="right panel">
+      <div class="info">
+        <div class="stat"><div>Jackpot (demo)</div><div id="jackpot">0 ₫</div></div>
+        <div class="stat"><div>Ván chơi</div><div id="round">0</div></div>
+        <div class="stat"><div>Pot</div><div id="pot">0 ₫</div></div>
+      </div>
+
+      <div>
+        <h4 style="margin:10px 0 6px 0">Lịch sử</h4>
+        <div id="history" class="history"></div>
+      </div>
+      <footer>Demo — lưu file <code>poker.html</code></footer>
+    </aside>
+  </div>
+
+<script>
+// ==== Utils & State ====
+const suits=['♠','♥','♦','♣'];
+const values=['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+let deck=[], player=[], dealer=[], community=[], step=0, gameActive=false;
+let bet=100, balance=0, round=0, pot=0, currentBet=0;
+
+// DOM
+const communityEl=document.getElementById('community');
+const playerEl=document.getElementById('player');
+const dealerEl=document.getElementById('dealer');
+const balanceEl=document.getElementById('balance');
+const startBtn=document.getElementById('startBtn');
+const nextBtn=document.getElementById('nextBtn');
+const callBtn=document.getElementById('callBtn');
+const raiseBtn=document.getElementById('raiseBtn');
+const foldBtn=document.getElementById('foldBtn');
+const betSelect=document.getElementById('betSelect');
+const resultEl=document.getElementById('result');
+const historyEl=document.getElementById('history');
+const playerHandEl=document.getElementById('playerHand');
+const dealerHandEl=document.getElementById('dealerHand');
+const jackpotEl=document.getElementById('jackpot');
+const roundEl=document.getElementById('round');
+const potEl=document.getElementById('pot');
+
+const KEY_BAL='tx_balance';
+const KEY_HISTORY='tx_poker_history';
+let historyData=[];
+
+// ==== Storage ====
+function save(){ localStorage.setItem(KEY_BAL,String(balance)); localStorage.setItem(KEY_HISTORY, JSON.stringify(historyData)); }
+function load(){ balance=Number(localStorage.getItem(KEY_BAL)) || 200000; historyData=JSON.parse(localStorage.getItem(KEY_HISTORY)||'[]'); renderHistory(); updateUI(); }
+
+// ==== Deck Helpers ====
+function createDeck(){ deck=[]; for(let s of suits) for(let v of values) deck.push({suit:s,value:v}); }
+function shuffle(){ for(let i=deck.length-1;i>0;i--){ let j=Math.floor(Math.random()*(i+1)); [deck[i],deck[j]]=[deck[j],deck[i]]; } }
+function draw(){ return deck.pop(); }
+
+function cardEl(card){ const div=document.createElement('div'); div.className='card '+((card.suit==='♥'||card.suit==='♦')?'red':''); div.textContent=`${card.value}${card.suit}`; return div; }
+function cardBackEl(){ const div=document.createElement('div'); div.className='card back'; return div; }
+
+// ==== Render ====
+function renderCommunity(){ communityEl.innerHTML=''; community.forEach(c=>communityEl.appendChild(cardEl(c))); }
+function renderPlayer(){ playerEl.innerHTML=''; player.forEach(c=>playerEl.appendChild(cardEl(c))); }
+function renderDealer(hideSecond=true){ dealerEl.innerHTML=''; dealer.forEach((c,i)=>dealerEl.appendChild((i===1 && hideSecond && gameActive)?cardBackEl():cardEl(c))); }
+
+// ==== History ====
+function addHistoryItem(txt,change){ const obj={txt,change,time:new Date().toLocaleString()}; historyData.unshift(obj); if(historyData.length>30) historyData.pop(); save(); renderHistory(); }
+function renderHistory(){ historyEl.innerHTML=''; historyData.forEach(h=>{ const d=document.createElement('div'); d.className='h-item'; d.innerHTML=`<div>${h.txt}</div><div>${h.change>0?'+':''}${h.change} ₫</div>`; historyEl.appendChild(d); }); }
+
+// ==== UI Update ====
+function updateUI(){ balanceEl.textContent=balance.toLocaleString('vi-VN'); jackpotEl.textContent='—'; roundEl.textContent=round; potEl.textContent=pot.toLocaleString('vi-VN'); }
+
+// ==== Poker Evaluation ====
+const rankVal={'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'10':10,'J':11,'Q':12,'K':13,'A':14};
+function combos(arr,k){ const res=[]; const n=arr.length; const comb=(start,cur)=>{ if(cur.length===k){ res.push(cur.slice()); return;} for(let i=start;i<n;i++){ cur.push(arr[i]); comb(i+1,cur); cur.pop(); }}; comb(0,[]); return res; }
+function getStraightRanks(cards){ const set=new Set(cards.map(c=>rankVal[c.value])); if(set.has(14)) set.add(1); let best=null,run=0,last=null; const nums=Array.from(set).sort((a,b)=>a-b); for(const n of nums){ if(last===null||n===last+1) run++; else run=1; last=n; if(run>=5) best=n; } return best; }
+function evaluate5(cards){ const vals=cards.map(c=>rankVal[c.value]).sort((a,b)=>b-a); const counts={}; for(const v of vals) counts[v]=(counts[v]||0)+1; const groups=Object.entries(counts).map(([v,c])=>[Number(v),c]).sort((a,b)=>b[1]-b[1]||b[0]-a[0]); const unique=Object.keys(counts).map(Number).sort((a,b)=>b-a); const suitCount={}; for(const c of cards) suitCount[c.suit]=(suitCount[c.suit]||0)+1; const flushSuit=Object.keys(suitCount).find(s=>suitCount[s]>=5); let flushCards=null; if(flushSuit) flushCards=cards.filter(c=>c.suit===flushSuit).sort((a,b)=>rankVal[b.value]-rankVal[a.value]); const straightTop=getStraightRanks(cards); let straightFlushTop=null; if(flushCards){ const top=getStraightRanks(flushCards); if(top) straightFlushTop=top; } if(straightFlushTop) return [8, straightFlushTop]; if(groups[0][1]===4){ const fourVal=groups[0][0]; const kicker=unique.find(v=>v!==fourVal); return [7,fourVal,kicker]; } if(groups[0][1]===3&&(groups[1]&&groups[1][1]>=2)) return [6,groups[0][0],groups[1][0]]; if(flushCards) return [5,...flushCards.slice(0,5).map(c=>rankVal[c.value])]; if(straightTop) return [4,straightTop]; if(groups[0][1]===3){ const threeVal=groups[0][0]; const kickers=unique.filter(v=>v!==threeVal).slice(0,2); return [3,threeVal,...kickers]; } if(groups[0][1]===2&&groups[1]&&groups[1][1]===2){ const high=groups[0][0], low=groups[1][0]; const kicker=unique.find(v=>v!==high&&v!==low); return [2,high,low,kicker]; } if(groups[0][1]===2){ const pair=groups[0][0]; const kickers=unique.filter(v=>v!==pair).slice(0,3); return [1,pair,...kickers]; } return [0,...unique.slice(0,5)]; }
+function compareRank(a,b){ for(let i=0;i<Math.max(a.length,b.length);i++){ const av=a[i]||0,bv=b[i]||0; if(av!==bv) return av>bv?1:-1; } return 0; }
+function bestOfSeven(seven){ const combos5=combos(seven,5); let best=null,bestRank=null; for(const c of combos5){ const r=evaluate5(c); if(!bestRank||compareRank(r,bestRank)===1){ bestRank=r; best=c.slice(); } } return {rank:bestRank, cards:best}; }
+function handName(rankArr){ const map={8:'Straight Flush',7:'Four of a Kind',6:'Full House',5:'Flush',4:'Straight',3:'Three of a Kind',2:'Two Pair',1:'One Pair',0:'High Card'}; return map[rankArr[0]]+(rankArr.slice(1).length?' ('+rankArr.slice(1).join(',')+')':''); }
+function renderHandsText(pBest,dBest){ playerHandEl.textContent=`Best: ${handName(pBest.rank)}`; dealerHandEl.textContent=`Best: ${handName(dBest.rank)}`; }
+
+// ==== AI Dealer (Smart) ====
+function dealerDecision(){
+    const dealerBest=bestOfSeven([...dealer,...community]);
+    const strength=dealerBest.rank[0]; // 0-8
+    const rnd=Math.random();
+
+    // Pre-flop
+    if(community.length===0){
+        const [d1,d2]=dealer;
+        if(d1.value===d2.value){ // pair
+            if(rankVal[d1.value]>=11) return {action:'raise', raiseAmt:currentBet*1.5};
+            return {action:'call'};
+        }
+        if(d1.suit===d2.suit && Math.abs(rankVal[d1.value]-rankVal[d2.value])<=2) return {action:'call'};
+        return {action:'fold'};
+    }
+
+    // Post-flop
+    if(strength>=6) return (rnd<0.2?{action:'fold'}:{action:'raise', raiseAmt:currentBet*(1+rnd)});
+    if(strength>=4) return (rnd<0.3?{action:'fold'}:{action:'call'});
+    if(strength>=2) return (rnd<0.5?{action:'fold'}:{action:'call'});
+    return {action:'fold'};
+}
+
+// ==== Events ====
+betSelect.addEventListener('change', ()=>{ bet=Number(betSelect.value); });
+
+startBtn.addEventListener('click', ()=>{
+    bet = Number(betSelect.value); // đảm bảo lấy giá trị mới nhất
+    if(balance < bet){
+        alert('Không đủ tiền để cược. Chọn mức cược thấp hơn hoặc nạp thêm tiền.');
+        return;
+    }
+
+    // Reset & tạo bài
+    createDeck(); shuffle(); 
+    player = [draw(), draw()]; 
+    dealer = [draw(), draw()]; 
+    community = []; 
+    step = 0; 
+    gameActive = true; 
+    round++;
+
+    // Cập nhật pot và balance
+    pot = bet * 2; 
+    balance -= bet; 
+    currentBet = bet;
+
+    save(); 
+    updateUI();
+
+    // Render bài
+    renderPlayer(); 
+    renderDealer(true); 
+    renderCommunity();
+
+    resultEl.textContent='Bắt đầu ván — Pre-flop. Chọn Call/Raise/Fold hoặc Next';
+    startBtn.disabled=true; 
+    nextBtn.disabled=false;
+    callBtn.disabled=false; 
+    raiseBtn.disabled=false; 
+    foldBtn.disabled=false;
+});
+
+callBtn.addEventListener('click', ()=>{
+    if(balance<currentBet){ alert('Không đủ tiền để Call'); return; }
+    balance-=currentBet; pot+=currentBet; updateUI();
+    const dealerAct=dealerDecision();
+    if(dealerAct.action==='fold'){ balance+=pot; addHistoryItem('Win (Dealer Fold)',pot); resultEl.textContent='Dealer Fold! Bạn thắng '+pot+' ₫'; gameActive=false; pot=0; startBtn.disabled=false; nextBtn.disabled=true; callBtn.disabled=true; raiseBtn.disabled=true; foldBtn.disabled=true; }
+    else if(dealerAct.action==='call'){ resultEl.textContent='Dealer Call. Bấm Next để tiếp tục'; }
+    else if(dealerAct.action==='raise'){ const r=dealerAct.raiseAmt; currentBet+=r; pot+=r; resultEl.textContent='Dealer Re-Raise '+r+' ₫! Chọn Call/Raise/Fold'; }
+    save();
+});
+
+raiseBtn.addEventListener('click', ()=>{
+    const raiseAmt=Number(prompt("Nhập số tiền Raise:",bet));
+    if(raiseAmt>balance){ alert("Không đủ tiền"); return; }
+    currentBet+=raiseAmt; pot+=raiseAmt; balance-=raiseAmt; updateUI(); addHistoryItem(`Player Raise ${raiseAmt}`,-raiseAmt);
+    const dealerAct=dealerDecision();
+    if(dealerAct.action==='fold'){ balance+=pot; addHistoryItem('Win (Dealer Fold)',pot); resultEl.textContent='Dealer Fold! Bạn thắng '+pot+' ₫'; gameActive=false; pot=0; startBtn.disabled=false; nextBtn.disabled=true; callBtn.disabled=true; raiseBtn.disabled=true; foldBtn.disabled=true; }
+    else if(dealerAct.action==='call'){ pot+=currentBet; resultEl.textContent='Dealer Call. Bấm Next để tiếp tục'; }
+    else if(dealerAct.action==='raise'){ const r=dealerAct.raiseAmt; currentBet+=r; pot+=r; resultEl.textContent='Dealer Re-Raise '+r+' ₫! Chọn Call/Raise/Fold'; }
+    save(); updateUI();
+});
+
+foldBtn.addEventListener('click', ()=>{
+    resultEl.textContent='Bạn Fold! Thua '+currentBet+' ₫'; addHistoryItem('Lose (Fold)',-currentBet); gameActive=false; pot=0; startBtn.disabled=false; nextBtn.disabled=true; callBtn.disabled=true; raiseBtn.disabled=true; foldBtn.disabled=true;
+});
+
+nextBtn.addEventListener('click', ()=>{
+    if(!gameActive){ alert('Bắt đầu ván trước đã'); return; }
+    if(step===0){ community.push(draw(),draw(),draw()); }
+    else if(step===1||step===2){ community.push(draw()); }
+    else if(step===3){
+        renderDealer(false);
+        const playerBest=bestOfSeven([...player,...community]);
+        const dealerBest=bestOfSeven([...dealer,...community]);
+        const cmp=compareRank(playerBest.rank,dealerBest.rank);
+        if(cmp===1){ balance+=pot; resultEl.textContent='Bạn thắng! +'+pot+' ₫ — tay: '+handName(playerBest.rank); addHistoryItem(`Win: ${handName(playerBest.rank)}`,pot);}
+        else if(cmp===-1){ resultEl.textContent='Bạn thua -'+currentBet+' ₫ — tay Dealer: '+handName(dealerBest.rank); addHistoryItem(`Lose: ${handName(dealerBest.rank)}`,-currentBet);}
+        else{ balance+=currentBet; resultEl.textContent='Hòa — hoàn tiền '+currentBet+' ₫'; addHistoryItem('Draw',0);}
+        gameActive=false; startBtn.disabled=false; nextBtn.disabled=true; callBtn.disabled=true; raiseBtn.disabled=true; foldBtn.disabled=true; pot=0;
+        renderHandsText(playerBest,dealerBest); save(); updateUI(); return;
+    }
+    step++; renderCommunity(); resultEl.textContent=step===1?'Flop':step===2?'Turn':'River';
+});
+
+// ==== Init ====
+function init(){ load(); startBtn.disabled=false; nextBtn.disabled=true; callBtn.disabled=true; raiseBtn.disabled=true; foldBtn.disabled=true; }
+init();
+document.getElementById('backHome').addEventListener('click', () => {
+window.location.href = 'index.html'; });
+</script>
+</body>
+</html>
